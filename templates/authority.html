@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Certificate Authority &bull; QR-Secure{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col-md-8">
+    <h2 class="fw-bold text-white mb-1">
+      <i class="bi bi-key-fill text-info me-2"></i>Root Certificate Authority (CA) &amp; Key Management
+    </h2>
+    <p class="text-secondary mb-0">Manages asymmetric cryptographic trust anchors, RSA 2048-bit keypairs, public key distribution, and key rotation lifecycle.</p>
+  </div>
+  <div class="col-md-4 text-md-end mt-2 mt-md-0">
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle p-2">
+      <i class="bi bi-shield-check me-1"></i> Root Trust Anchor
+    </span>
+  </div>
+</div>
+
+<!-- Security Policy Advisory Box -->
+<div class="alert alert-info security-card border-info border-opacity-50 p-3 mb-4">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-shield-lock-fill text-info fs-4"></i>
+    <div>
+      <strong class="text-white">Cryptographic Key Security Policy:</strong>
+      <span class="text-secondary small d-block">
+        The RSA-2048 signing private key is isolated on the secure server host with restricted filesystem permissions (0600) and is <strong>never transmitted</strong> over the network or exposed to client endpoints.
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Active CA Card -->
+  <div class="col-lg-7">
+    <div class="security-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">
+          <i class="bi bi-patch-check-fill text-success me-2"></i>Active Root Authority Credentials
+        </h5>
+        <span class="badge badge-status badge-verified">
+          <i class="bi bi-circle-fill" style="font-size: 8px;"></i> ACTIVE
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-security mb-3 small">
+          <tbody>
+            <tr>
+              <td class="text-secondary" style="width: 35%;">Authority Entity:</td>
+              <td class="fw-bold text-white">{{ authority.authority_name if authority else 'QR-Secure Authority' }}</td>
+            </tr>
+            <tr>
+              <td class="text-secondary">Certificate ID:</td>
+              <td class="fw-mono text-info">{{ authority.certificate_id if authority else 'CERT-ROOT' }}</td>
+            </tr>
+            <tr>
+              <td class="text-secondary">Key Algorithm:</td>
+              <td class="text-white">{{ authority.key_algorithm if authority else 'RSA-2048 / SHA-256' }}</td>
+            </tr>
+            <tr>
+              <td class="text-secondary">Valid From:</td>
+              <td class="text-light">{{ authority.valid_from if authority else '-' }}</td>
+            </tr>
+            <tr>
+              <td class="text-secondary">Valid Until:</td>
+              <td class="text-light">{{ authority.valid_until if authority else '-' }}</td>
+            </tr>
+            <tr>
+              <td class="text-secondary">Key Fingerprint:</td>
+              <td>
+                <div class="crypto-hash small mt-1">
+                  {{ authority.fingerprint if authority else '-' }}
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-info btn-sm px-3" data-bs-toggle="modal" data-bs-target="#pubKeyModal">
+          <i class="bi bi-eye me-1"></i> VIEW PUBLIC KEY
+        </button>
+        <button type="button" class="btn btn-outline-warning btn-sm px-3" onclick="confirmKeyRotation()">
+          <i class="bi bi-arrow-repeat me-1"></i> ROTATE KEYPAIR
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Cryptographic Principle Card -->
+  <div class="col-lg-5">
+    <div class="security-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3">
+        <i class="bi bi-shield-lock text-info me-2"></i>Asymmetric Architecture
+      </h5>
+      
+      <div class="p-3 rounded bg-black bg-opacity-30 border border-secondary mb-3 small">
+        <h6 class="text-warning fw-semibold mb-1"><i class="bi bi-file-earmark-lock2-fill"></i> RSA Private Key (Issuer Only)</h6>
+        <p class="text-secondary mb-0">Kept encrypted/isolated on server filesystem. Never sent to verifiers or browsers. Used strictly to compute the digital signature over canonical payload hashes.</p>
+      </div>
+
+      <div class="p-3 rounded bg-black bg-opacity-30 border border-secondary small">
+        <h6 class="text-success fw-semibold mb-1"><i class="bi bi-file-earmark-arrow-up-fill"></i> RSA Public Key (Verifiers)</h6>
+        <p class="text-secondary mb-0">Distributed openly to all verifiers and inspection scanners. Used to mathematically verify signatures. Cannot be used to sign fraudulent credentials.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Authority Key History -->
+<div class="row">
+  <div class="col-12">
+    <div class="security-card p-4">
+      <h5 class="fw-bold text-white mb-3">
+        <i class="bi bi-clock-history text-info me-2"></i>Certificate Authority Key Lifecycle History
+      </h5>
+      
+      <div class="table-responsive">
+        <table class="table table-security align-middle mb-0 small">
+          <thead>
+            <tr>
+              <th>Certificate ID</th>
+              <th>Authority</th>
+              <th>Public Key Fingerprint</th>
+              <th>Algorithm</th>
+              <th>Valid Until</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in history %}
+            <tr>
+              <td class="fw-mono text-info">{{ rec.certificate_id }}</td>
+              <td class="text-white">{{ rec.authority_name }}</td>
+              <td><span class="crypto-hash small">{{ rec.fingerprint }}</span></td>
+              <td>{{ rec.key_algorithm }}</td>
+              <td class="text-secondary">{{ rec.valid_until }}</td>
+              <td>
+                {% if rec.status == 'ACTIVE' %}
+                  <span class="badge badge-status badge-verified">ACTIVE</span>
+                {% else %}
+                  <span class="badge bg-secondary">SUPERSEDED</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Public Key Modal -->
+<div class="modal fade" id="pubKeyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content security-card bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-key-fill text-info me-2"></i>Authority Public Key (PEM Format)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary small mb-2">SubjectPublicKeyInfo format (RSA 2048-bit). Used by all verifier stations.</p>
+        <pre class="crypto-sig p-3" id="pubKeyPemText" style="max-height: 280px; font-size: 0.75rem;">{{ authority.public_key if authority else '' }}</pre>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-info btn-sm" onclick="copyToClipboard(document.getElementById('pubKeyPemText').textContent, this)">
+          <i class="bi bi-clipboard me-1"></i> Copy Public Key
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function confirmKeyRotation() {
+  if (!confirm("Are you sure you want to rotate the Certificate Authority keypair?\n\nThis will generate a fresh RSA-2048 keypair and archive the previous one. Existing QR codes signed with the old key will need the archived public key or re-issuance.")) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/authority/rotate-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Key rotation successful! New Root Certificate generated.");
+      location.reload();
+    } else {
+      alert("Key rotation error: " + data.error);
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Network error during key rotation");
+  }
+}
+</script>
+{% endblock %}

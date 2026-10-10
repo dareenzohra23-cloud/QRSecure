@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In &bull; QR-Secure Authentication{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center py-5 min-vh-75">
+  <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+    <div class="security-card p-4 p-md-5">
+      
+      <div class="text-center mb-4">
+        <div class="d-inline-flex p-3 rounded-circle bg-primary bg-opacity-10 border border-primary border-opacity-25 mb-3">
+          <i class="bi bi-shield-lock text-info fs-1"></i>
+        </div>
+        <h3 class="fw-bold text-white mb-1">QR-Secure Enterprise</h3>
+        <p class="text-secondary small">Cryptographic Credential &amp; Identity Authentication</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+        <div class="mb-3">
+          <label for="username" class="form-label text-secondary small fw-semibold">Username</label>
+          <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary"><i class="bi bi-person text-secondary"></i></span>
+            <input type="text" class="form-control" id="username" name="username" placeholder="e.g. admin or verifier" required autofocus>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="password" class="form-label text-secondary small fw-semibold">Password</label>
+          <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary"><i class="bi bi-key text-secondary"></i></span>
+            <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+        </button>
+      </form>
+
+      <!-- System Credentials Quick Fill -->
+      <div class="border-top border-secondary pt-3 mt-3 text-center">
+        <p class="text-secondary small mb-2 fw-semibold">System Default Roles:</p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+          <button type="button" class="btn btn-sm btn-outline-info" onclick="fillCredentials('admin', 'admin123')">
+            <i class="bi bi-person-badge"></i> Admin / Issuer
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fillCredentials('verifier', 'verifier123')">
+            <i class="bi bi-check2-circle"></i> Verifier
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 p-2 rounded bg-black bg-opacity-25 text-center text-muted small border border-secondary border-opacity-25">
+        <i class="bi bi-lock-fill text-warning me-1"></i> Passwords secured via PBKDF2/scrypt salted hashing.
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillCredentials(user, pass) {
+  document.getElementById('username').value = user;
+  document.getElementById('password').value = pass;
+}
+</script>
+{% endblock %}

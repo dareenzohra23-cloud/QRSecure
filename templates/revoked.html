@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Revocation Registry &bull; QR-Secure{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col-md-8">
+    <h2 class="fw-bold text-white mb-1">
+      <i class="bi bi-slash-circle text-danger me-2"></i>Credential Revocation Registry
+    </h2>
+    <p class="text-secondary mb-0">Blacklist and invalidate issued QR codes before their expiration date (e.g. reported lost, stolen, or suspended credentials).</p>
+  </div>
+  <div class="col-md-4 text-md-end mt-2 mt-md-0">
+    <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 px-3 py-2">
+      <i class="bi bi-shield-x me-1"></i> CRL Security Mechanism
+    </span>
+  </div>
+</div>
+
+<!-- Tabs: Registry vs Issued QRs -->
+<div class="row g-4">
+  
+  <!-- Issued QR Codes List -->
+  <div class="col-lg-8">
+    <div class="security-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">
+          <i class="bi bi-card-list text-info me-2"></i>Issued Credentials Directory
+        </h5>
+        <span class="text-secondary small">{{ qrs|length }} total issued</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-security align-middle small mb-0">
+          <thead>
+            <tr>
+              <th>QR ID</th>
+              <th>Type</th>
+              <th>Issued At</th>
+              <th>Expires At</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if qrs %}
+              {% for qr in qrs %}
+              <tr>
+                <td><span class="badge bg-dark border border-secondary text-info fw-mono">{{ qr.qr_id }}</span></td>
+                <td class="text-light">{{ qr.type }}</td>
+                <td class="text-secondary">{{ qr.issued_at }}</td>
+                <td class="text-secondary">{{ qr.expires_at }}</td>
+                <td>
+                  {% if qr.status == 'ACTIVE' %}
+                    <span class="badge badge-status badge-verified">ACTIVE</span>
+                  {% elif qr.status == 'REVOKED' %}
+                    <span class="badge badge-status badge-revoked">REVOKED</span>
+                  {% else %}
+                    <span class="badge badge-status badge-expired">{{ qr.status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if qr.status == 'ACTIVE' %}
+                    <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="openRevokeModal('{{ qr.qr_id }}')">
+                      <i class="bi bi-x-circle me-1"></i> Revoke
+                    </button>
+                  {% else %}
+                    <span class="text-muted small">&mdash;</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-secondary">
+                  No credentials issued yet. Generate your first QR code via the generator.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revocations History Log -->
+  <div class="col-lg-4">
+    <div class="security-card p-4 h-100">
+      <h5 class="fw-bold text-white mb-3">
+        <i class="bi bi-journal-x text-danger me-2"></i>Revocation Audit Log
+      </h5>
+
+      {% if revocations %}
+        <div class="list-group list-group-flush bg-transparent">
+          {% for rev in revocations %}
+          <div class="list-group-item bg-transparent border-secondary text-light px-0 py-2 small">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 fw-mono">{{ rev.qr_id }}</span>
+              <span class="text-secondary" style="font-size: 0.72rem;">{{ rev.revoked_at }}</span>
+            </div>
+            <div class="text-white fw-semibold mb-1">{{ rev.reason }}</div>
+            <div class="text-secondary" style="font-size: 0.72rem;">Revoked by: <span class="text-info">{{ rev.revoked_by }}</span></div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5 text-secondary">
+          <i class="bi bi-shield-check text-success display-4 d-block mb-2"></i>
+          <p class="small mb-0">No active revocations recorded.<br>All non-expired passes remain valid.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Revoke Confirmation Modal -->
+<div class="modal fade" id="revokeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content security-card bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-danger">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Credential Revocation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary small mb-3">
+          Revoking <strong class="text-white fw-mono" id="modalQrId"></strong> will invalidate the credential immediately. Any subsequent scan attempt by a verifier will be blocked.
+        </p>
+        <div class="mb-3">
+          <label class="form-label small text-secondary fw-semibold">Revocation Reason</label>
+          <select class="form-select form-select-sm mb-2" id="reasonPreset" onchange="handleReasonPreset(this.value)">
+            <option value="Reported lost or stolen">Reported lost or stolen</option>
+            <option value="Student / Attendee suspended or expelled">Student / Attendee suspended</option>
+            <option value="Issuer administrative invalidation">Issuer administrative invalidation</option>
+            <option value="Suspected cryptographic key compromise">Suspected credential compromise</option>
+            <option value="custom">Other custom reason...</option>
+          </select>
+          <input type="text" class="form-control form-control-sm d-none" id="customReasonInput" placeholder="Specify custom reason">
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="submitRevocation()">
+          <i class="bi bi-slash-circle me-1"></i> Confirm Revocation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let targetQrId = '';
+const revokeModal = new bootstrap.Modal(document.getElementById('revokeModal'));
+
+function openRevokeModal(qrId) {
+  targetQrId = qrId;
+  document.getElementById('modalQrId').textContent = qrId;
+  revokeModal.show();
+}
+
+function handleReasonPreset(val) {
+  const custom = document.getElementById('customReasonInput');
+  custom.classList.toggle('d-none', val !== 'custom');
+}
+
+async function submitRevocation() {
+  const preset = document.getElementById('reasonPreset').value;
+  const custom = document.getElementById('customReasonInput').value.trim();
+  const reason = (preset === 'custom') ? (custom || 'Revoked by authority') : preset;
+
+  try {
+    const res = await fetch('/api/qr/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qr_id: targetQrId, reason: reason })
+    });
+    const data = await res.json();
+    if (data.success) {
+      revokeModal.hide();
+      showToast(`Credential ${targetQrId} has been revoked.`, 'danger');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Failed to revoke', 'danger');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Network error during revocation', 'danger');
+  }
+}
+</script>
+{% endblock %}

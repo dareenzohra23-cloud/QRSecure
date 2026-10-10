@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Security Dashboard &bull; QR-Secure{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col-md-7">
+    <h2 class="fw-bold text-white mb-1">
+      <i class="bi bi-shield-check text-info me-2"></i>Security Operations Dashboard
+    </h2>
+    <p class="text-secondary mb-0">Cryptographic authentication monitoring, tamper tracking, and credential lifecycle statistics.</p>
+  </div>
+  <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+    {% if current_user.role == 'ADMIN' %}
+    <a href="{{ url_for('qr.generate_view') }}" class="btn btn-primary btn-sm px-3 shadow-sm">
+      <i class="bi bi-plus-circle me-1"></i> Issue Credential
+    </a>
+    {% endif %}
+    <a href="{{ url_for('verify.verify_view') }}" class="btn btn-outline-info btn-sm px-3 shadow-sm">
+      <i class="bi bi-qr-code-scan me-1"></i> Scanner &amp; Verifier
+    </a>
+  </div>
+</div>
+
+<!-- 5 Stat Cards -->
+<div class="row g-3 mb-4">
+  <!-- Total QR Codes -->
+  <div class="col-6 col-md-4 col-xl-2dot4 col-lg">
+    <div class="security-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center text-secondary mb-2">
+        <span class="small fw-semibold text-uppercase tracking-wider">Total Credentials</span>
+        <i class="bi bi-qr-code text-primary fs-5"></i>
+      </div>
+      <div class="display-6 fw-bold text-white mb-1" id="statTotal">{{ stats.total_qr }}</div>
+      <div class="small text-secondary">Generated in registry</div>
+    </div>
+  </div>
+
+  <!-- Valid / Active -->
+  <div class="col-6 col-md-4 col-xl-2dot4 col-lg">
+    <div class="security-card p-3 h-100 border-start border-4 border-success">
+      <div class="d-flex justify-content-between align-items-center text-secondary mb-2">
+        <span class="small fw-semibold text-uppercase tracking-wider">Valid / Active</span>
+        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+      </div>
+      <div class="display-6 fw-bold text-success mb-1" id="statValid">{{ stats.valid_qr }}</div>
+      <div class="small text-secondary">Cryptographically active</div>
+    </div>
+  </div>
+
+  <!-- Expired -->
+  <div class="col-6 col-md-4 col-xl-2dot4 col-lg">
+    <div class="security-card p-3 h-100 border-start border-4 border-warning">
+      <div class="d-flex justify-content-between align-items-center text-secondary mb-2">
+        <span class="small fw-semibold text-uppercase tracking-wider">Expired</span>
+        <i class="bi bi-hourglass-bottom text-warning fs-5"></i>
+      </div>
+      <div class="display-6 fw-bold text-warning mb-1" id="statExpired">{{ stats.expired_qr }}</div>
+      <div class="small text-secondary">Outside validity period</div>
+    </div>
+  </div>
+
+  <!-- Revoked -->
+  <div class="col-6 col-md-4 col-xl-2dot4 col-lg">
+    <div class="security-card p-3 h-100 border-start border-4 border-danger">
+      <div class="d-flex justify-content-between align-items-center text-secondary mb-2">
+        <span class="small fw-semibold text-uppercase tracking-wider">Revoked</span>
+        <i class="bi bi-slash-circle-fill text-danger fs-5"></i>
+      </div>
+      <div class="display-6 fw-bold text-danger mb-1" id="statRevoked">{{ stats.revoked_qr }}</div>
+      <div class="small text-secondary">Blacklisted by issuer</div>
+    </div>
+  </div>
+
+  <!-- Tampered Attempts -->
+  <div class="col-12 col-md-4 col-xl-2dot4 col-lg">
+    <div class="security-card p-3 h-100 border-start border-4 border-danger">
+      <div class="d-flex justify-content-between align-items-center text-secondary mb-2">
+        <span class="small fw-semibold text-uppercase tracking-wider text-danger">Tampered Attempts</span>
+        <i class="bi bi-shield-slash-fill text-danger fs-5"></i>
+      </div>
+      <div class="display-6 fw-bold text-danger mb-1" id="statTampered">{{ stats.tampered_attempts }}</div>
+      <div class="small text-secondary">Signature failures caught</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts & Authority Information -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="security-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">
+          <i class="bi bi-bar-chart-line text-info me-2"></i>Verification Activity Breakdown
+        </h5>
+        <span class="badge bg-secondary-subtle text-secondary small">Real-time Telemetry</span>
+      </div>
+      <div style="height: 250px;">
+        <canvas id="verificationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="security-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">
+          <i class="bi bi-pie-chart text-info me-2"></i>Credential Status Distribution
+        </h5>
+        <span class="badge bg-secondary-subtle text-secondary small">Registry Stats</span>
+      </div>
+      <div style="height: 250px; position: relative;">
+        <canvas id="statusDoughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verification Logs Table -->
+<div class="row">
+  <div class="col-12">
+    <div class="security-card p-4">
+      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+        <div>
+          <h5 class="fw-bold text-white mb-0">
+            <i class="bi bi-clock-history text-info me-2"></i>Recent Verification Audit Log
+          </h5>
+          <p class="text-secondary small mb-0">All scan attempts evaluated by SHA-256 integrity and RSA-2048 verification.</p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh Logs
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-security align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>QR ID</th>
+              <th>Status Result</th>
+              <th>Reason / Diagnostic</th>
+              <th>Scan Method</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent_logs %}
+              {% for log in recent_logs %}
+              <tr>
+                <td class="text-secondary small">{{ log.timestamp }}</td>
+                <td>
+                  <span class="badge bg-dark border border-secondary text-info fw-mono">{{ log.qr_id }}</span>
+                </td>
+                <td>
+                  {% if log.result == 'VERIFIED' %}
+                    <span class="badge badge-status badge-verified">
+                      <i class="bi bi-check-circle-fill"></i> VERIFIED
+                    </span>
+                  {% elif log.result == 'TAMPERED' %}
+                    <span class="badge badge-status badge-tampered">
+                      <i class="bi bi-shield-x"></i> TAMPER DETECTED
+                    </span>
+                  {% elif log.result == 'EXPIRED' %}
+                    <span class="badge badge-status badge-expired">
+                      <i class="bi bi-hourglass-bottom"></i> EXPIRED
+                    </span>
+                  {% elif log.result == 'REVOKED' %}
+                    <span class="badge badge-status badge-revoked">
+                      <i class="bi bi-slash-circle-fill"></i> REVOKED
+                    </span>
+                  {% elif log.result == 'REPLAY_DETECTED' %}
+                    <span class="badge badge-status badge-replay">
+                      <i class="bi bi-arrow-repeat"></i> REPLAY
+                    </span>
+                  {% else %}
+                    <span class="badge bg-danger">{{ log.result }}</span>
+                  {% endif %}
+                </td>
+                <td class="small text-light">{{ log.reason }}</td>
+                <td>
+                  <span class="badge bg-secondary-subtle text-secondary small">
+                    <i class="bi {% if log.method == 'Camera' %}bi-camera-video{% elif log.method == 'Upload' %}bi-file-earmark-arrow-up{% else %}bi-terminal{% endif %} me-1"></i>
+                    {{ log.method }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-secondary">
+                  <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                  No verification events recorded yet. Perform a scan in <a href="{{ url_for('verify.verify_view') }}" class="text-info">Scanner &amp; Verifier</a> to populate activity logs.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Chart 1: Verification Activity Breakdown
+  const ctxBar = document.getElementById('verificationChart').getContext('2d');
+  new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+      labels: ['Verified (Authentic)', 'Tampered (Signature Fail)', 'Expired Credentials', 'Revoked Credentials', 'Replay Blocked'],
+      datasets: [{
+        label: 'Verification Outcomes',
+        data: [
+          {{ stats.verified_logs }},
+          {{ stats.tampered_logs }},
+          {{ stats.expired_logs }},
+          {{ stats.revoked_logs }},
+          {{ stats.replay_logs }}
+        ],
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.7)',
+          'rgba(239, 68, 68, 0.7)',
+          'rgba(245, 158, 11, 0.7)',
+          'rgba(220, 38, 38, 0.7)',
+          'rgba(234, 179, 8, 0.7)'
+        ],
+        borderColor: [
+          '#10b981',
+          '#ef4444',
+          '#f59e0b',
+          '#dc2626',
+          '#eab308'
+        ],
+        borderWidth: 1.5,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#94a3b8', stepSize: 1 },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' }
+        },
+        x: {
+          ticks: { color: '#94a3b8', font: { size: 10 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  // Chart 2: Status Doughnut
+  const ctxPie = document.getElementById('statusDoughnutChart').getContext('2d');
+  new Chart(ctxPie, {
+    type: 'doughnut',
+    data: {
+      labels: ['Valid / Active', 'Expired', 'Revoked'],
+      datasets: [{
+        data: [
+          {{ stats.valid_qr }},
+          {{ stats.expired_qr }},
+          {{ stats.revoked_qr }}
+        ],
+        backgroundColor: [
+          '#10b981',
+          '#f59e0b',
+          '#ef4444'
+        ],
+        borderColor: '#1e293b',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', padding: 14 }
+        }
+      },
+      cutout: '68%'
+    }
+  });
+});
+</script>
+{% endblock %}

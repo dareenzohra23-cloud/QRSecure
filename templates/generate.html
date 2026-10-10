@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Secure QR &bull; QR-Secure{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col-md-8">
+    <h2 class="fw-bold text-white mb-1">
+      <i class="bi bi-qr-code text-info me-2"></i>Generate Cryptographically Signed QR Code
+    </h2>
+    <p class="text-secondary mb-0">Embeds canonical JSON data, SHA-256 digest, and RSA-2048 digital signature directly into standard QR format.</p>
+  </div>
+  <div class="col-md-4 text-md-end mt-2 mt-md-0">
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+      <i class="bi bi-shield-lock-fill me-1"></i> Authority: {{ active_authority.authority_name if active_authority else 'QR-Secure Authority' }}
+    </span>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Form Column -->
+  <div class="col-lg-7">
+    <div class="security-card p-4">
+      <h5 class="fw-bold text-white mb-3">
+        <i class="bi bi-input-cursor-text text-info me-2"></i>Credential Configuration
+      </h5>
+
+      <!-- Template Selector -->
+      <div class="mb-4">
+        <label for="qrTypeSelect" class="form-label text-secondary small fw-semibold">Select Credential Template</label>
+        <select class="form-select form-select-lg" id="qrTypeSelect" onchange="switchTemplate()">
+          <option value="STUDENT_ID" selected>🎓 Template 1 &mdash; Student Identity Card</option>
+          <option value="EVENT_PASS">🎟️ Template 2 &mdash; Event Pass &amp; Single-Use Ticket</option>
+          <option value="CERTIFICATE">📜 Template 3 &mdash; Academic / Professional Certificate</option>
+          <option value="CUSTOM">⚙️ Template 4 &mdash; Custom Secure Key-Value Data</option>
+        </select>
+      </div>
+
+      <!-- Template Fields Container -->
+      <form id="qrForm" onsubmit="handleGenerate(event)">
+        
+        <!-- Template 1: Student ID -->
+        <div id="fieldsStudent" class="template-section">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Student Name</label>
+              <input type="text" class="form-control" id="student_name" value="Hemashree" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">USN / Student ID</label>
+              <input type="text" class="form-control" id="student_usn" value="1VTXX001" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Branch / Department</label>
+              <input type="text" class="form-control" id="student_branch" value="Information Science & Engineering" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Institution</label>
+              <input type="text" class="form-control" id="student_institution" value="Example Institute of Technology" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template 2: Event Pass -->
+        <div id="fieldsEvent" class="template-section d-none">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Attendee Name</label>
+              <input type="text" class="form-control" id="event_name" value="Alice Johnson">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Event Name</label>
+              <input type="text" class="form-control" id="event_title" value="CyberSecurity Summit 2026">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Event ID</label>
+              <input type="text" class="form-control" id="event_id" value="EVT-2026-CYBER">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Seat / Gate / Registration No.</label>
+              <input type="text" class="form-control" id="event_seat" value="VIP-Row-A-04">
+            </div>
+          </div>
+        </div>
+
+        <!-- Template 3: Certificate -->
+        <div id="fieldsCert" class="template-section d-none">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Recipient Name</label>
+              <input type="text" class="form-control" id="cert_recipient" value="Bob Martinez">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Certificate Title</label>
+              <input type="text" class="form-control" id="cert_title" value="Certified Network Security Professional">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Certificate ID</label>
+              <input type="text" class="form-control" id="cert_id" value="CERT-SEC-9988">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Issuing Organization</label>
+              <input type="text" class="form-control" id="cert_org" value="Information Security Standards Board">
+            </div>
+          </div>
+        </div>
+
+        <!-- Template 4: Custom Key-Value -->
+        <div id="fieldsCustom" class="template-section d-none">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-secondary fw-semibold">Custom Key-Value Attributes</span>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="addCustomRow()">
+              <i class="bi bi-plus-lg"></i> Add Field
+            </button>
+          </div>
+          <div id="customRowsContainer">
+            <div class="row g-2 mb-2 custom-row">
+              <div class="col-5">
+                <input type="text" class="form-control form-control-sm custom-key" placeholder="Key (e.g. employee_id)" value="badge_id">
+              </div>
+              <div class="col-6">
+                <input type="text" class="form-control form-control-sm custom-val" placeholder="Value" value="SEC-ADMIN-01">
+              </div>
+              <div class="col-1 text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCustomRow(this)"><i class="bi bi-trash"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validity & Security Options -->
+        <div class="mt-4 pt-3 border-top border-secondary">
+          <h6 class="text-white small fw-bold mb-3"><i class="bi bi-clock-history text-info me-1"></i> Validity & Security Constraints</h6>
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-secondary">Validity Duration</label>
+              <select class="form-select form-select-sm" id="validityPreset" onchange="handleValidityPreset(this.value)">
+                <option value="365" selected>1 Year (Standard)</option>
+                <option value="30">30 Days</option>
+                <option value="1">24 Hours (Event/Visitor)</option>
+                <option value="custom">Specific Expiration Date</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6" id="customDateField" style="display: none;">
+              <label class="form-label small text-secondary">Custom Expiry Date</label>
+              <input type="date" class="form-control form-control-sm" id="customExpiryInput">
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="oneTimeUseSwitch">
+                <label class="form-check-label small text-secondary" for="oneTimeUseSwitch">
+                  Enable One-Time Use Replay Protection (Single Scan Validity with Cryptographic Nonce)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow" id="btnSubmit">
+            <span id="btnText"><i class="bi bi-shield-check me-2"></i>GENERATE SECURE QR</span>
+            <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- QR Result Column -->
+  <div class="col-lg-5">
+    <div class="security-card p-4 text-center h-100 d-flex flex-column justify-content-center" id="qrResultContainer">
+      <div id="emptyPlaceholder">
+        <i class="bi bi-qr-code text-secondary opacity-50 display-1 mb-3 d-block"></i>
+        <h5 class="text-white-50">QR Code Preview</h5>
+        <p class="text-secondary small">Complete the form and click "GENERATE SECURE QR" to compute the SHA-256 digest and sign with RSA-2048.</p>
+      </div>
+
+      <div id="generatedContent" class="d-none text-start">
+        
+        <!-- Status Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="badge badge-status badge-verified">
+            <i class="bi bi-check-circle-fill"></i> STATUS: VALID
+          </span>
+          <span class="badge bg-dark border border-secondary text-info fw-mono" id="dispQrId">QR-2026-00001</span>
+        </div>
+
+        <!-- QR Code Image Display -->
+        <div class="text-center mb-3">
+          <div class="qr-preview-box">
+            <img id="dispQrImg" src="" alt="Secure QR Code">
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 justify-content-center mb-3">
+          <a id="btnDownload" href="" download="secure_qr.png" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-download me-1"></i> Download PNG
+          </a>
+          <button class="btn btn-sm btn-outline-info" onclick="printCard()">
+            <i class="bi bi-printer me-1"></i> Print Pass
+          </button>
+          <button class="btn btn-sm btn-success" id="btnVerifyDirect" onclick="verifyGeneratedDirectly()">
+            <i class="bi bi-check-circle me-1"></i> Verify Directly
+          </button>
+        </div>
+
+        <!-- Cryptographic Metadata Card -->
+        <div class="bg-black bg-opacity-40 p-3 rounded border border-secondary small mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-secondary">Issuer:</span>
+            <span class="text-white fw-semibold" id="dispIssuer">QR-Secure Authority</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-secondary">Issued:</span>
+            <span class="text-light" id="dispIssuedAt">-</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-secondary">Expires:</span>
+            <span class="text-light" id="dispExpiresAt">-</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-secondary">Algorithm:</span>
+            <span class="text-info fw-semibold">RSA-2048 / SHA-256</span>
+          </div>
+          
+          <div class="mt-2 pt-2 border-top border-secondary">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-secondary small">SHA-256 Fingerprint:</span>
+              <button class="btn btn-link btn-sm text-info p-0" onclick="copyFingerprint()"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <div class="crypto-hash small" id="dispHolderHash">-</div>
+          </div>
+        </div>
+
+        <!-- Technical Inspection Accordion -->
+        <div class="accordion accordion-flush" id="techAccordion">
+          <div class="accordion-item bg-transparent border-secondary">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed bg-transparent text-secondary py-2 px-1 small" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTech">
+                <i class="bi bi-code-slash text-info me-2"></i> Inspect Signed Payload &amp; Digital Signature
+              </button>
+            </h2>
+            <div id="collapseTech" class="accordion-collapse collapse">
+              <div class="accordion-body px-1 py-2">
+                <span class="text-secondary small d-block mb-1">Canonical String (Bytes Signed):</span>
+                <pre class="crypto-sig p-2 mb-2" id="dispCanon" style="max-height: 80px;"></pre>
+                <span class="text-secondary small d-block mb-1">Base64 RSA Digital Signature:</span>
+                <pre class="crypto-sig p-2 mb-0" id="dispSig" style="max-height: 80px;"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let lastGeneratedPayload = null;
+
+function switchTemplate() {
+  const type = document.getElementById('qrTypeSelect').value;
+  document.querySelectorAll('.template-section').forEach(el => el.classList.add('d-none'));
+  
+  if (type === 'STUDENT_ID') document.getElementById('fieldsStudent').classList.remove('d-none');
+  else if (type === 'EVENT_PASS') document.getElementById('fieldsEvent').classList.remove('d-none');
+  else if (type === 'CERTIFICATE') document.getElementById('fieldsCert').classList.remove('d-none');
+  else if (type === 'CUSTOM') document.getElementById('fieldsCustom').classList.remove('d-none');
+}
+
+function handleValidityPreset(val) {
+  const customField = document.getElementById('customDateField');
+  customField.style.display = (val === 'custom') ? 'block' : 'none';
+}
+
+function addCustomRow() {
+  const container = document.getElementById('customRowsContainer');
+  const row = document.createElement('div');
+  row.className = 'row g-2 mb-2 custom-row';
+  row.innerHTML = `
+    <div class="col-5">
+      <input type="text" class="form-control form-control-sm custom-key" placeholder="Key">
+    </div>
+    <div class="col-6">
+      <input type="text" class="form-control form-control-sm custom-val" placeholder="Value">
+    </div>
+    <div class="col-1 text-center">
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCustomRow(this)"><i class="bi bi-trash"></i></button>
+    </div>
+  `;
+  container.appendChild(row);
+}
+
+function removeCustomRow(btn) {
+  btn.closest('.custom-row').remove();
+}
+
+async function handleGenerate(e) {
+  e.preventDefault();
+  
+  const type = document.getElementById('qrTypeSelect').value;
+  let dataDict = {};
+
+  if (type === 'STUDENT_ID') {
+    dataDict = {
+      name: document.getElementById('student_name').value.trim(),
+      usn: document.getElementById('student_usn').value.trim(),
+      branch: document.getElementById('student_branch').value.trim(),
+      institution: document.getElementById('student_institution').value.trim()
+    };
+  } else if (type === 'EVENT_PASS') {
+    dataDict = {
+      name: document.getElementById('event_name').value.trim(),
+      event_name: document.getElementById('event_title').value.trim(),
+      event_id: document.getElementById('event_id').value.trim(),
+      seat_or_reg: document.getElementById('event_seat').value.trim()
+    };
+  } else if (type === 'CERTIFICATE') {
+    dataDict = {
+      recipient: document.getElementById('cert_recipient').value.trim(),
+      title: document.getElementById('cert_title').value.trim(),
+      certificate_id: document.getElementById('cert_id').value.trim(),
+      institution: document.getElementById('cert_org').value.trim()
+    };
+  } else if (type === 'CUSTOM') {
+    document.querySelectorAll('.custom-row').forEach(row => {
+      const k = row.querySelector('.custom-key').value.trim();
+      const v = row.querySelector('.custom-val').value.trim();
+      if (k) dataDict[k] = v;
+    });
+  }
+
+  // Validity calculation
+  const preset = document.getElementById('validityPreset').value;
+  let expiresAtIso = null;
+  if (preset === 'custom') {
+    const customDate = document.getElementById('customExpiryInput').value;
+    if (customDate) {
+      expiresAtIso = new Date(customDate).toISOString().replace('.000', '');
+    }
+  } else {
+    const days = parseInt(preset);
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    expiresAtIso = d.toISOString().replace('.000', '');
+  }
+
+  const isOneTime = document.getElementById('oneTimeUseSwitch').checked;
+
+  const btnText = document.getElementById('btnText');
+  const btnSpinner = document.getElementById('btnSpinner');
+  const btnSubmit = document.getElementById('btnSubmit');
+
+  btnSubmit.disabled = true;
+  btnText.classList.add('d-none');
+  btnSpinner.classList.remove('d-none');
+
+  try {
+    const resp = await fetch('/api/qr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: type,
+        data: dataDict,
+        expires_at: expiresAtIso,
+        is_one_time: isOneTime
+      })
+    });
+
+    const res = await resp.json();
+
+    if (res.success) {
+      lastGeneratedPayload = res.json_payload;
+      
+      document.getElementById('emptyPlaceholder').classList.add('d-none');
+      document.getElementById('generatedContent').classList.remove('d-none');
+
+      document.getElementById('dispQrId').textContent = res.qr_id;
+      document.getElementById('dispQrImg').src = res.qr_image_uri;
+      document.getElementById('btnDownload').href = res.qr_image_uri;
+      document.getElementById('btnDownload').download = `${res.qr_id}.png`;
+      document.getElementById('dispIssuer').textContent = res.issuer;
+      document.getElementById('dispIssuedAt').textContent = res.issued_at;
+      document.getElementById('dispExpiresAt').textContent = res.expires_at;
+      document.getElementById('dispHolderHash').textContent = res.payload_hash;
+      document.getElementById('dispCanon').textContent = res.canonical_str;
+      document.getElementById('dispSig').textContent = res.signature;
+
+      showToast(`Secure QR Code ${res.qr_id} signed and generated!`, 'success');
+    } else {
+      showToast(res.error || 'Failed to generate QR', 'danger');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Network error during QR generation', 'danger');
+  } finally {
+    btnSubmit.disabled = false;
+    btnText.classList.remove('d-none');
+    btnSpinner.classList.add('d-none');
+  }
+}
+
+function copyFingerprint() {
+  const hash = document.getElementById('dispHolderHash').textContent;
+  copyToClipboard(hash);
+  showToast('SHA-256 fingerprint copied to clipboard!', 'info');
+}
+
+function printCard() {
+  window.print();
+}
+
+function verifyGeneratedDirectly() {
+  if (lastGeneratedPayload) {
+    sessionStorage.setItem('qr_verify_direct_payload', lastGeneratedPayload);
+    window.location.href = '/verify';
+  }
+}
+</script>
+{% endblock %}

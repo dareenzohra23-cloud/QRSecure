@@ -1,0 +1,235 @@
+/* QR-Secure Cybersecurity Design System */
+:root {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --bg-card: #1e293b;
+  --bg-card-hover: #27354a;
+  --border-color: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-cyan: #06b6d4;
+  --accent-blue: #3b82f6;
+  --status-verified: #10b981;
+  --status-tampered: #ef4444;
+  --status-expired: #f59e0b;
+  --status-revoked: #dc2626;
+  --status-replay: #eab308;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism & Cards */
+.security-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.security-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.nav-security {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Status Badges */
+.badge-status {
+  padding: 0.35rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.badge-verified {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-tampered {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-expired {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-revoked {
+  background: rgba(220, 38, 38, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+}
+
+.badge-replay {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+/* Monospace Code & Fingerprints */
+.crypto-hash {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.82rem;
+  background: #090d16;
+  color: #38bdf8;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  word-break: break-all;
+}
+
+.crypto-sig {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.78rem;
+  background: #090d16;
+  color: #a78bfa;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  word-break: break-all;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Forms */
+.form-control, .form-select {
+  background-color: #0f172a;
+  border: 1px solid var(--border-color);
+  color: #f8fafc;
+  border-radius: 8px;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: #131d35;
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+  box-shadow: 0 0 0 0.25rem rgba(6, 182, 212, 0.25);
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulseRedGlow {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.verified-card-glow {
+  animation: pulseGlow 2.5s infinite;
+  border-color: #10b981 !important;
+}
+
+.tampered-card-glow {
+  animation: pulseRedGlow 2s infinite;
+  border-color: #ef4444 !important;
+}
+
+
+/* Verification Result Box */
+.verify-result-hero {
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid transparent;
+}
+
+.result-hero-verified {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: #10b981;
+}
+
+.result-hero-tampered {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+}
+
+.result-hero-expired {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: #f59e0b;
+}
+
+.result-hero-revoked {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: #dc2626;
+}
+
+.result-hero-replay {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: #eab308;
+}
+
+/* QR Code Container */
+.qr-preview-box {
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 12px;
+  display: inline-block;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.qr-preview-box img {
+  max-width: 240px;
+  height: auto;
+  display: block;
+}
+
+/* Tables */
+.table-security {
+  color: #e2e8f0;
+}
+.table-security th {
+  border-bottom: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.table-security td {
+  border-bottom: 1px solid #1e293b;
+  vertical-align: middle;
+}
+
+/* Diff Highlighting */
+.diff-removed {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  text-decoration: line-through;
+}
+
+.diff-added {
+  background: rgba(16, 185, 129, 0.25);
+  color: #86efac;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
