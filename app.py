@@ -11,6 +11,7 @@ from routes.dashboard_routes import dashboard_bp
 from routes.qr_routes import qr_bp
 from routes.verify_routes import verify_bp
 from routes.authority_routes import authority_bp
+import os
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -53,10 +54,9 @@ def create_app(config_class=Config):
 app = create_app()
 
 if __name__ == '__main__':
-    print("=" * 65)
-    print("  QR-Secure: Cryptographically Secure QR Code Authentication")
-    print("  Server starting at: http://127.0.0.1:5000")
-    print("  Default Admin: admin / admin123")
-    print("  Default Verifier: verifier / verifier123")
-    print("=" * 65)
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False
+    )
